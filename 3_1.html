@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Интерактив: Документы производственного контроля</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body {
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: #f0f4f8;
+            margin: 0;
+            padding: 20px;
+            color: #1e2a3e;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 32px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+            padding: 20px 24px 32px 24px;
+        }
+        h1 {
+            font-size: 1.8rem;
+            margin-top: 0;
+            margin-bottom: 0.25rem;
+            color: #0f3b5c;
+        }
+        .sub {
+            color: #2c5a7a;
+            border-left: 4px solid #ff9800;
+            padding-left: 16px;
+            margin: 16px 0 24px 0;
+            font-size: 1rem;
+            background: #fef5e8;
+            border-radius: 12px;
+            padding: 12px 16px;
+        }
+        
+        /* ДВА СТОЛБЦА: фиксированная структура */
+        .two-columns {
+            display: flex;
+            gap: 24px;
+            margin: 20px 0 24px;
+            flex-wrap: nowrap;
+        }
+        
+        /* Левый столбец — документы */
+        .docs-column {
+            flex: 1;
+            background: #f9fafc;
+            border-radius: 28px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            min-width: 0;
+        }
+        
+        /* Правый столбец — описания */
+        .descs-column {
+            flex: 1;
+            background: #fefcf7;
+            border-radius: 28px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            min-width: 0;
+        }
+        
+        .column-title {
+            font-size: 1.4rem;
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        /* Документы — вертикальный список */
+        .docs-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .doc-item {
+            background: white;
+            border: 2px solid #dce4ec;
+            border-radius: 20px;
+            padding: 16px 18px;
+            cursor: grab;
+            transition: all 0.2s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            position: relative;
+        }
+        .doc-item:active {
+            cursor: grabbing;
+        }
+        .doc-item.dragging {
+            opacity: 0.4;
+            cursor: grabbing;
+        }
+        .doc-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #0f3b5c;
+            pointer-events: none;
+            line-height: 1.3;
+        }
+        .doc-badge {
+            font-size: 0.7rem;
+            background: #eef2f7;
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 40px;
+            margin-top: 8px;
+            color: #2c5a7a;
+            pointer-events: none;
+        }
+        .matched-status {
+            font-size: 0.75rem;
+            margin-top: 8px;
+            color: #2e7d64;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #e0f2e9;
+            padding: 4px 10px;
+            border-radius: 60px;
+            width: fit-content;
+        }
+        
+        /* Описания — вертикальный список */
+        .descs-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .desc-item {
+            background: #ffffff;
+            border: 2px solid #f0e4cd;
+            border-radius: 20px;
+            padding: 14px 18px;
+            cursor: grab;
+            transition: all 0.2s;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+        }
+        .desc-item:active {
+            cursor: grabbing;
+        }
+        .desc-item.dragging {
+            opacity: 0.4;
+        }
+        .desc-text {
+            font-size: 0.95rem;
+            line-height: 1.4;
+            pointer-events: none;
+        }
+        
+        /* Состояния matched */
+        .doc-item.matched {
+            background: #e1f5e8;
+            border-color: #2c9c6e;
+            cursor: default;
+            opacity: 0.8;
+        }
+        .doc-item.matched {
+            cursor: default;
+        }
+        .desc-item.matched {
+            cursor: default;
+            background: #eef3fc;
+            border-color: #8db5d6;
+            opacity: 0.7;
+        }
+        
+        /* сообщения */
+        .feedback {
+            background: #eef2fa;
+            border-radius: 28px;
+            padding: 18px 24px;
+            margin: 20px 0 16px;
+            font-size: 1rem;
+            border-left: 6px solid #ff9800;
+        }
+        .feedback.success {
+            background: #e0f2e9;
+            border-left-color: #2e7d64;
+            color: #1c4e3f;
+        }
+        .feedback.error {
+            background: #ffe6e5;
+            border-left-color: #d9534f;
+            color: #9b2e2b;
+        }
+        .attempts {
+            font-size: 0.85rem;
+            background: #f1f3f6;
+            padding: 8px 14px;
+            border-radius: 60px;
+            display: inline-block;
+            margin-bottom: 16px;
+        }
+        .reset-btn {
+            background: #1e4663;
+            color: white;
+            border: none;
+            border-radius: 60px;
+            padding: 12px 28px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-top: 12px;
+            margin-right: 12px;
+        }
+        .reset-btn:hover {
+            background: #0f3550;
+            transform: scale(0.98);
+        }
+        footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.75rem;
+            color: #6f8faa;
+        }
+        
+        .drag-over {
+            border: 2px dashed #ff9800;
+            background: #fff2e0;
+        }
+        
+        /* Адаптация для мобильных: два столбца сохраняются */
+        @media (max-width: 800px) {
+            .container {
+                padding: 12px;
+            }
+            h1 {
+                font-size: 1.4rem;
+            }
+            .two-columns {
+                gap: 16px;
+            }
+            .docs-column, .descs-column {
+                padding: 12px;
+            }
+            .column-title {
+                font-size: 1.2rem;
+                margin-bottom: 12px;
+            }
+            .doc-title {
+                font-size: 0.95rem;
+            }
+            .desc-text {
+                font-size: 0.85rem;
+            }
+            .doc-item, .desc-item {
+                padding: 12px 14px;
+            }
+        }
+        
+        @media (max-width: 600px) {
+            .two-columns {
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+            .docs-column, .descs-column {
+                min-width: 280px;
+                flex: 1;
+            }
+            .doc-title {
+                font-size: 0.9rem;
+            }
+            .desc-text {
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>📋 Сопоставьте документ и его описание</h1>
+    <div class="sub">
+        💡 Перетащите описание из правой колонки к соответствующему документу слева.<br>
+        У вас будет <strong>3 попытки</strong> на каждое сопоставление. После трёх ошибок покажется верный ответ.
+    </div>
+
+    <div class="attempts" id="attemptsInfo">✨ Попытки на активное задание: 3 осталось</div>
+
+    <!-- СТРОГО ДВА СТОЛБЦА -->
+    <div class="two-columns">
+        <!-- Левый столбец: Документы -->
+        <div class="docs-column">
+            <div class="column-title">
+                📄 Документы ПК
+            </div>
+            <div class="docs-list" id="documentsList"></div>
+        </div>
+
+        <!-- Правый столбец: Описания -->
+        <div class="descs-column">
+            <div class="column-title">
+                📝 Описания
+            </div>
+            <div class="descs-list" id="descriptionsList"></div>
+        </div>
+    </div>
+
+    <div class="feedback" id="feedbackMessage">
+        👆 Перетащите любой текст-описание на карточку документа.
+    </div>
+
+    <button class="reset-btn" id="resetBtn">⟳ Пройти заново</button>
+    <button class="reset-btn" id="showAnswersBtn" style="background:#5f6c7a;">🔍 Показать правильные ответы (подсказка)</button>
+    <footer>Drag & drop — перетаскивание работает на ПК и сенсорных экранах (зажмите и перенесите).</footer>
+</div>
+
+<script>
+    // ----- ДАННЫЕ -----
+    const documentsData = [
+        { id: "pos", name: "Положение о ПК", correctDesc: "Ваша «конституция»: здесь написано, кто ходит с проверками, когда и за что отвечает. Утверждается один раз и живёт годами." },
+        { id: "journal", name: "Журнал ПК", correctDesc: "Самая важная рабочая тетрадь. Туда вы заносите всё, что нашли." },
+        { id: "acts", name: "Акты проверок", correctDesc: "Подробные доклады по итогам каждого выхода на объект. Чаще всего их оформляют, когда нашли нарушения." },
+        { id: "orders", name: "Предписания", correctDesc: "Официальное «задание» для цеха или мастера: исправить то-то к такому-то числу." },
+        { id: "report", name: "Годовой отчёт", correctDesc: "Подведение итогов. Документ, который вы сдаёте в Ростехнадзор до 1 апреля." }
+    ];
+
+    let descriptionsPool = [
+        { id: "desc1", text: "Ваша «конституция»: здесь написано, кто ходит с проверками, когда и за что отвечает. Утверждается один раз и живёт годами.", matchedTo: "pos" },
+        { id: "desc2", text: "Самая важная рабочая тетрадь. Туда вы заносите всё, что нашли.", matchedTo: "journal" },
+        { id: "desc3", text: "Подробные доклады по итогам каждого выхода на объект. Чаще всего их оформляют, когда нашли нарушения.", matchedTo: "acts" },
+        { id: "desc4", text: "Официальное «задание» для цеха или мастера: исправить то-то к такому-то числу.", matchedTo: "orders" },
+        { id: "desc5", text: "Подведение итогов. Документ, который вы сдаёте в Ростехнадзор до 1 апреля.", matchedTo: "report" }
+    ];
+
+    let matchedDocs = {
+        pos: false,
+        journal: false,
+        acts: false,
+        orders: false,
+        report: false
+    };
+    let matchedDescs = {
+        desc1: false,
+        desc2: false,
+        desc3: false,
+        desc4: false,
+        desc5: false
+    };
+    let attemptsLeftForCurrent = 3;
+    let currentDragDocId = null;
+    let currentDragDescId = null;
+    let gameCompleted = false;
+
+    const documentsListEl = document.getElementById('documentsList');
+    const descriptionsListEl = document.getElementById('descriptionsList');
+    const feedbackEl = document.getElementById('feedbackMessage');
+    const attemptsSpan = document.getElementById('attemptsInfo');
+    const resetBtn = document.getElementById('resetBtn');
+    const showAnswersBtn = document.getElementById('showAnswersBtn');
+
+    function render() {
+        // Рендер документов (левый столбец)
+        documentsListEl.innerHTML = '';
+        documentsData.forEach(doc => {
+            const isMatched = matchedDocs[doc.id];
+            const docDiv = document.createElement('div');
+            docDiv.className = `doc-item ${isMatched ? 'matched' : ''}`;
+            docDiv.setAttribute('data-doc-id', doc.id);
+            docDiv.setAttribute('draggable', !isMatched);
+            if (!isMatched) {
+                docDiv.setAttribute('draggable', 'true');
+            } else {
+                docDiv.setAttribute('draggable', 'false');
+            }
+            docDiv.innerHTML = `
+                <div class="doc-title">📌 ${doc.name}</div>
+                <div class="doc-badge">документ</div>
+                ${isMatched ? '<div class="matched-status">✅ Сопоставлено</div>' : ''}
+            `;
+            docDiv.addEventListener('dragstart', handleDragStartDoc);
+            docDiv.addEventListener('dragend', handleDragEnd);
+            docDiv.addEventListener('dragover', handleDragOver);
+            docDiv.addEventListener('dragleave', handleDragLeave);
+            docDiv.addEventListener('drop', handleDropOnDoc);
+            docDiv.addEventListener('touchstart', handleTouchStartDoc, {passive: false});
+            docDiv.addEventListener('touchmove', handleTouchMove, {passive: false});
+            docDiv.addEventListener('touchend', handleTouchEndDoc);
+            documentsListEl.appendChild(docDiv);
+        });
+
+        // Рендер описаний (правый столбец)
+        descriptionsListEl.innerHTML = '';
+        const activeDescs = descriptionsPool.filter(desc => !matchedDescs[desc.id]);
+        activeDescs.forEach(desc => {
+            const descDiv = document.createElement('div');
+            descDiv.className = `desc-item`;
+            descDiv.setAttribute('data-desc-id', desc.id);
+            descDiv.setAttribute('draggable', 'true');
+            descDiv.innerHTML = `<div class="desc-text">📄 ${desc.text}</div>`;
+            descDiv.addEventListener('dragstart', handleDragStartDesc);
+            descDiv.addEventListener('dragend', handleDragEnd);
+            descDiv.addEventListener('dragover', handleDragOver);
+            descDiv.addEventListener('dragleave', handleDragLeave);
+            descDiv.addEventListener('drop', handleDropOnDesc);
+            descDiv.addEventListener('touchstart', handleTouchStartDesc, {passive: false});
+            descDiv.addEventListener('touchmove', handleTouchMove, {passive: false});
+            descDiv.addEventListener('touchend', handleTouchEndDesc);
+            descriptionsListEl.appendChild(descDiv);
+        });
+
+        if (!gameCompleted) {
+            attemptsSpan.innerText = `✨ Попытки на текущее сопоставление: ${attemptsLeftForCurrent} осталось`;
+        } else {
+            attemptsSpan.innerText = `🏆 Все документы сопоставлены! Отлично!`;
+        }
+    }
+
+    function handleDragStartDoc(e) {
+        if (gameCompleted) return false;
+        const docDiv = e.target.closest('.doc-item');
+        if (!docDiv) return false;
+        const docId = docDiv.getAttribute('data-doc-id');
+        if (matchedDocs[docId]) {
+            e.preventDefault();
+            return false;
+        }
+        currentDragDocId = docId;
+        currentDragDescId = null;
+        e.dataTransfer.setData('text/plain', docId);
+        e.dataTransfer.effectAllowed = 'copy';
+        docDiv.classList.add('dragging');
+        return true;
+    }
+
+    function handleDragStartDesc(e) {
+        if (gameCompleted) return false;
+        const descDiv = e.target.closest('.desc-item');
+        if (!descDiv) return false;
+        const descId = descDiv.getAttribute('data-desc-id');
+        if (matchedDescs[descId]) {
+            e.preventDefault();
+            return false;
+        }
+        currentDragDescId = descId;
+        currentDragDocId = null;
+        e.dataTransfer.setData('text/plain', descId);
+        e.dataTransfer.effectAllowed = 'copy';
+        descDiv.classList.add('dragging');
+        return true;
+    }
+
+    function handleDragEnd(e) {
+        document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
+        currentDragDocId = null;
+        currentDragDescId = null;
+    }
+
+    function handleDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+        const target = e.target.closest('.doc-item, .desc-item');
+        if (target && !target.classList.contains('matched')) {
+            target.classList.add('drag-over');
+        }
+    }
+
+    function handleDragLeave(e) {
+        const target = e.target.closest('.doc-item, .desc-item');
+        if (target) target.classList.remove('drag-over');
+    }
+
+    function clearDragOver() {
+        document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+    }
+
+    function tryMatch(docId, descId) {
+        if (gameCompleted) return false;
+        const descObj = descriptionsPool.find(d => d.id === descId);
+        if (!descObj) return false;
+        const docObj = documentsData.find(d => d.id === docId);
+        if (!docObj) return false;
+
+        const isCorrect = (descObj.matchedTo === docId);
+
+        if (isCorrect) {
+            matchedDocs[docId] = true;
+            matchedDescs[descId] = true;
+            feedbackEl.innerHTML = '✅ <strong>Верно!</strong> ' + docObj.name + ' — это действительно: "' + descObj.text.substring(0, 80) + '…"';
+            feedbackEl.className = 'feedback success';
+            attemptsLeftForCurrent = 3;
+            const allMatched = Object.values(matchedDocs).every(v => v === true);
+            if (allMatched) {
+                gameCompleted = true;
+                feedbackEl.innerHTML = '🎉 <strong>Поздравляем!</strong> Вы верно сопоставили все 5 документов. Теперь вы точно знаете, что должно лежать в папке «Промбезопасность».';
+                feedbackEl.className = 'feedback success';
+                attemptsSpan.innerText = '🏆 Все документы сопоставлены! Отлично!';
+            }
+            render();
+            return true;
+        } else {
+            attemptsLeftForCurrent--;
+            if (attemptsLeftForCurrent <= 0) {
+                const correctDescText = docObj.correctDesc;
+                feedbackEl.innerHTML = `❌ <strong>Исчерпаны попытки.</strong> Правильное описание для «${docObj.name}»: <br> «${correctDescText}». Попробуйте сопоставить другие документы или нажмите «Пройти заново».`;
+                feedbackEl.className = 'feedback error';
+                attemptsLeftForCurrent = 0;
+                render();
+            } else {
+                feedbackEl.innerHTML = `❌ <strong>Неверно.</strong> Описание не подходит для «${docObj.name}». Осталось попыток: ${attemptsLeftForCurrent}. Подсказка: ищите ключевые слова («конституция», «рабочая тетрадь», «доклад», «задание», «итоги»).`;
+                feedbackEl.className = 'feedback error';
+                render();
+            }
+            return false;
+        }
+    }
+
+    function handleDropOnDoc(e) {
+        e.preventDefault();
+        clearDragOver();
+        if (gameCompleted) return;
+        const targetDoc = e.target.closest('.doc-item');
+        if (!targetDoc) return;
+        const docId = targetDoc.getAttribute('data-doc-id');
+        if (matchedDocs[docId]) {
+            feedbackEl.innerHTML = '⚠️ Этот документ уже сопоставлен. Сбросьте игру, чтобы попробовать заново.';
+            feedbackEl.className = 'feedback error';
+            return;
+        }
+        if (currentDragDescId) {
+            const descId = currentDragDescId;
+            if (matchedDescs[descId]) {
+                feedbackEl.innerHTML = '⚠️ Это описание уже использовано.';
+                feedbackEl.className = 'feedback error';
+                return;
+            }
+            tryMatch(docId, descId);
+        } else {
+            feedbackEl.innerHTML = '💡 Перетащите описание из правой колонки на документ.';
+            feedbackEl.className = 'feedback';
+        }
+        currentDragDescId = null;
+        currentDragDocId = null;
+    }
+
+    function handleDropOnDesc(e) {
+        e.preventDefault();
+        clearDragOver();
+        if (gameCompleted) return;
+        feedbackEl.innerHTML = '👆 Перетащите описание на карточку документа (левую колонку), а не на описание.';
+        feedbackEl.className = 'feedback';
+        currentDragDocId = null;
+        currentDragDescId = null;
+    }
+
+    let touchTargetDocId = null;
+    let touchTargetDescId = null;
+    
+    function handleTouchStartDoc(e) {
+        e.preventDefault();
+        const docDiv = e.target.closest('.doc-item');
+        if (!docDiv || matchedDocs[docDiv.getAttribute('data-doc-id')]) return;
+        touchTargetDocId = docDiv.getAttribute('data-doc-id');
+        touchTargetDescId = null;
+        docDiv.classList.add('dragging');
+    }
+    
+    function handleTouchStartDesc(e) {
+        e.preventDefault();
+        const descDiv = e.target.closest('.desc-item');
+        if (!descDiv || matchedDescs[descDiv.getAttribute('data-desc-id')]) return;
+        touchTargetDescId = descDiv.getAttribute('data-desc-id');
+        touchTargetDocId = null;
+        descDiv.classList.add('dragging');
+    }
+    
+    function handleTouchMove(e) {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const elemUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
+        if (elemUnderTouch) {
+            const docCandidate = elemUnderTouch.closest('.doc-item');
+            if (docCandidate && !matchedDocs[docCandidate.getAttribute('data-doc-id')]) {
+                docCandidate.classList.add('drag-over');
+            } else {
+                document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+            }
+        }
+    }
+    
+    function handleTouchEndDoc(e) {
+        e.preventDefault();
+        document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
+        if (!touchTargetDescId) {
+            clearDragOver();
+            return;
+        }
+        const touch = e.changedTouches[0];
+        const endElem = document.elementFromPoint(touch.clientX, touch.clientY);
+        const targetDoc = endElem?.closest('.doc-item');
+        if (targetDoc && !matchedDocs[targetDoc.getAttribute('data-doc-id')] && touchTargetDescId) {
+            const docId = targetDoc.getAttribute('data-doc-id');
+            tryMatch(docId, touchTargetDescId);
+        } else {
+            feedbackEl.innerHTML = '💡 Перетащите описание на свободную карточку документа.';
+            feedbackEl.className = 'feedback';
+        }
+        clearDragOver();
+        touchTargetDocId = null;
+        touchTargetDescId = null;
+    }
+    
+    function handleTouchEndDesc(e) {
+        e.preventDefault();
+        document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
+        clearDragOver();
+        touchTargetDescId = null;
+    }
+
+    function resetGame() {
+        matchedDocs = { pos: false, journal: false, acts: false, orders: false, report: false };
+        matchedDescs = { desc1: false, desc2: false, desc3: false, desc4: false, desc5: false };
+        attemptsLeftForCurrent = 3;
+        gameCompleted = false;
+        currentDragDocId = null;
+        currentDragDescId = null;
+        descriptionsPool.sort(() => Math.random() - 0.5);
+        feedbackEl.innerHTML = '🔄 Игра сброшена. Перетащите описание из правой колонки к нужному документу.';
+        feedbackEl.className = 'feedback';
+        render();
+    }
+
+    function showCorrectAnswers() {
+        let message = '📖 <strong>Правильные пары:</strong><br><br>';
+        documentsData.forEach(doc => {
+            message += `• <strong>${doc.name}</strong><br>→ «${doc.correctDesc}»<br><br>`;
+        });
+        feedbackEl.innerHTML = message;
+        feedbackEl.className = 'feedback success';
+    }
+
+    resetBtn.addEventListener('click', resetGame);
+    showAnswersBtn.addEventListener('click', showCorrectAnswers);
+
+    function init() {
+        descriptionsPool.sort(() => Math.random() - 0.5);
+        resetGame();
+    }
+    init();
+</script>
+</body>
+</html>
